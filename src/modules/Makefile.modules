@@ -1,0 +1,65 @@
+
+BUILD_ROOT := ../../
+OUTPUT_ROOT := $(BUILD_ROOT)/out/modules
+OBJECT_ROOT := $(BUILD_ROOT)/obj/modules
+
+LOG_SRC := $(notdir $(wildcard log/*.c)) 
+LOG_OBJ := $(LOG_SRC:.c=.o)
+LOG_TARGET := $(addprefix $(OUTPUT_ROOT)/,log.so)
+
+
+FRAMEWORK_SRC := $(notdir $(wildcard framework/*.c)) 
+FRAMEWORK_OBJ := $(FRAMEWORK_SRC:.c=.o)
+FRAMEWORK_TARGET := $(addprefix $(OUTPUT_ROOT)/,framework.so)
+
+RESOURCES := $(wildcard */*.ui)
+RESOURCES_PATH := $(OUTPUT_ROOT)/res
+RESOURCES_TARGET := $(addprefix $(RESOURCES_PATH)/,$(notdir RESOURCES))
+
+vpath %.o $(OBJECT_ROOT)
+vpath %.c framework log
+
+CONFIG_LIBS := gtk+-2.0
+
+CFLAGS += -I./
+CFLAGS += `pkg-config --cflags $(CONFIG_LIBS)`
+LDLIBS += -export-dynamic
+
+LDLIBS += `pkg-config --libs $(CONFIG_LIBS)`
+
+#Target := $(TARGET_PATH)/ADS
+#MODULES := framework.so log.so
+
+all:$(LOG_TARGET) $(FRAMEWORK_TARGET) $(RESOURCES_TARGET)
+	@echo "Modules Done"
+
+$(RESOURCES_TARGET):$(RESOURCES) | $(RESOURCES_PATH)
+	@cp -rf $(RESOURCES) $(RESOURCES_PATH)
+
+$(RESOURCES_PATH):
+	@mkdir -p $(RESOURCES_PATH) 2>/dev/null
+
+$(OBJECT_ROOT):
+	@mkdir -p $(OBJECT_ROOT) 2>/dev/null
+
+$(OUTPUT_ROOT):
+	@mkdir -p $(OUTPUT_ROOT) 2>/dev/null
+
+
+$(LOG_TARGET):$(LOG_OBJ) | $(OUTPUT_ROOT)
+	gcc -g -shared -o $@ $(addprefix $(OBJECT_ROOT)/,$(LOG_OBJ)) $(LDLIBS)
+
+$(LOG_OBJ):%.o:%.c | $(OBJECT_ROOT)
+	gcc -g -c $< $(CFLAGS) -o $(OBJECT_ROOT)/$@ 
+
+$(FRAMEWORK_TARGET):$(FRAMEWORK_OBJ) | $(OUTPUT_ROOT)
+	gcc -g -shared -o $@ $(addprefix $(OBJECT_ROOT)/,$(FRAMEWORK_OBJ)) $(LDLIBS)
+
+$(FRAMEWORK_OBJ):%.o:%.c | $(OBJECT_ROOT)
+	gcc -g -c $< $(CFLAGS) -o $(OBJECT_ROOT)/$@ 
+
+
+.PHONY:clean
+clean:
+	rm -rf $(OUTPUT_ROOT) $(OBJECT_ROOT)
+
